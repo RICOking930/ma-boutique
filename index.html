@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ELEGANCE BOUTIQUE BY ROXANE</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- FontAwesome pour les icônes -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- BARRE DE NAVIGATION -->
+    <header class="navbar">
+        <div class="logo">👗 ELEGANCE BOUTIQUE BY ROXANE</div>
+        <div class="menu">
+            <button onclick="togglePanier()" class="btn-panier">
+                <i class="fa-solid fa-bag-shopping"></i> Mon Panier (<span id="badge-panier">0</span>)
+            </button>
+        </div>
+    </header>
+
+    <!-- SECTION ESPACE CLIENT -->
+    <main class="conteneur">
+        
+        <!-- BANNIÈRE D'ACCUEIL -->
+        <section class="hero">
+            <h1>Sublimez votre Style au Quotidien</h1>
+            <p>Découvrez nos plus belles collections sélectionnées avec soin.</p>
+        </section>
+
+        <!-- BARRE DE RECHERCHE ET FILTRES -->
+        <div class="zone-recherche">
+            <div class="barre-recherche">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="recherche-input" placeholder="Rechercher un vêtement..." onkeyup="rechercherProduit()">
+            </div>
+            
+            <div class="filtres">
+                <button class="btn-filtre active" onclick="filtrer('tous')">Tous</button>
+                <button class="btn-filtre" onclick="filtrer('Robes')">Robes</button>
+                <button class="btn-filtre" onclick="filtrer('Ensembles')">Ensembles</button>
+                <button class="btn-filtre" onclick="filtrer('Accessoires')">Accessoires</button>
+            </div>
+        </div>
+
+        <!-- GRILLE DES PRODUITS -->
+        <div id="grille-produits" class="grille-produits"></div>
+
+    </main>
+
+    <!-- MODAL PANIER ET COMMANDE -->
+    <div id="modal-panier" class="modal-panier cache">
+        <div class="contenu-panier">
+            <div class="entete-panier">
+                <h2><i class="fa-solid fa-cart-shopping"></i> Mon Panier</h2>
+                <button onclick="togglePanier()" class="btn-fermer">&times;</button>
+            </div>
+
+            <div id="liste-panier" class="liste-panier"></div>
+
+            <div class="total-section">
+                <h3>Total : <span id="total-prix">0</span> FCFA</h3>
+            </div>
+
+            <div class="formulaire-paiement">
+                <h3>Finaliser la commande</h3>
+                <div class="champ">
+                    <label>Moyen de paiement :</label>
+                    <select id="mode-paiement">
+                        <option value="Wave">Wave Mobile Money</option>
+                        <option value="Orange Money">Orange Money</option>
+                        <option value="MTN Money">MTN Mobile Money</option>
+                        <option value="Moov Money">Moov Money</option>
+                        <option value="Carte Bancaire">Carte Bancaire</option>
+                    </select>
+                </div>
+                <div class="champ">
+                    <input type="text" id="client-nom" placeholder="Nom complet" required>
+                </div>
+                <div class="champ">
+                    <input type="tel" id="client-tel" placeholder="Numéro de téléphone" required>
+                </div>
+                <button onclick="validerPaiement()" class="btn-payer">
+                    <i class="fa-solid fa-lock"></i> Commander sur WhatsApp
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
