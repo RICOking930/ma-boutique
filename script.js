@@ -1,142 +1,150 @@
-// Récupère la liste enregistrée ou démarre avec une liste vide
-let listeArticles = JSON.parse(localStorage.getItem('mes_vetements')) || [];
-let panier = [];
+const firebaseConfig = {
+  apiKey: "AIzaSyAujAtX1jWdgTpPrqVI6bD1s6792WiOVgI",
+  authDomain: "ma-boutique-33a29.firebaseapp.com",
+  databaseURL: "https://ma-boutique-33a29-default-rtdb.firebaseio.com",
+  projectId: "ma-boutique-33a29",
+  storageBucket: "ma-boutique-33a29.firebasestorage.app",
+  messagingSenderId: "458036073354",
+  appId: "1:458036073354:web:0908ef9d10424b6851ae73"
+};
 
-// Numéro WhatsApp configuré au format international (+225)
-const numeroWhatsApp = "2250140587890";
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
 
-// 1. Afficher les vêtements sur la boutique
-function afficherArticles(articles = listeArticles) {
-    const grille = document.getElementById('grille-produits');
-    grille.innerHTML = '';
+const WHATSAPP_NUMBER = "+2250140587890";
 
-    if (articles.length === 0) {
-        grille.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: #777; padding: 40px 0;">Aucun article disponible pour le moment.</p>`;
+let products = [];
+let cart = [];
+let selectedCategory = 'all';
+
+// Écoute en direct des articles publiés par l'Admin
+database.ref('products').on('value', (snapshot) => {
+    const data = snapshot.val();
+    products = [];
+    if (data) {
+        Object.keys(data).forEach(key => {
+            products.push({ id: key, ...data[key] });
+        });
+    }
+    renderProducts();
+});
+
+function renderProducts() {
+    const grid = document.getElementById('articles-container');
+    grid.innerHTML = '';
+
+    const searchKeyword = document.getElementById('search-input').value.toLowerCase();
+
+    const filtered = products.filter(p => {
+        const matchesCategory = (selectedCategory === 'all' || p.category === selectedCategory);
+        const matchesSearch = p.title.toLowerCase().includes(searchKeyword);
+        return matchesCategory && matchesSearch;
+    });
+
+    if (filtered.length === 0) {
+        grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#888;">Aucun article disponible pour le moment.</p>';
         return;
     }
 
-    articles.forEach(article => {
-        const carte = document.createElement('div');
-        carte.className = 'carte-produit';
-        
-        const message = `Bonjour ELEGANCE BOUTIQUE BY ROXANE, je souhaite commander cet article :\n- Nom : ${article.nom}\n- Prix : ${article.prix.toLocaleString()} FCFA`;
-        const lienWhatsapp = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(message)}`;
-
-        carte.innerHTML = `
-            <img src="${article.image}" alt="${article.nom}">
-            <div class="infos-produit">
-                <span class="badge-categorie">${article.categorie}</span>
-                <h3>${article.nom}</h3>
-                <div class="prix">${article.prix.toLocaleString()} FCFA</div>
-                <div class="tailles"><strong>Tailles :</strong> ${article.tailles}</div>
-                <div class="actions-produit">
-                    <button class="btn-ajouter" onclick="ajouterAuPanier(${article.id})">
-                        <i class="fa-solid fa-cart-plus"></i> Ajouter au panier
-                    </button>
-                    <a href="${lienWhatsapp}" target="_blank" class="btn-whatsapp">
-                        <i class="fa-brands fa-whatsapp"></i> Commander sur WhatsApp
-                    </a>
-                </div>
-            </div>
+    filtered.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'product-card';
+        card.innerHTML = `
+            <img src="${p.image}" alt="${p.title}">
+            <span class="badge-category">${p.category}</span>
+            <h3>${p.title}</h3>
+            <div class="product-price">${p.price.toLocaleString()} FCFA</div>
+            <div class="product-size">Tailles : ${p.size}</div>
+            <button class="btn-add-cart" onclick="addToCart('${p.id}')">Ajouter au panier</button>
         `;
-        grille.appendChild(carte);
+        grid.appendChild(card);
     });
 }
 
-// 2. Recherche rapide
-function rechercherProduit() {
-    const recherche = document.getElementById('recherche-input').value.toLowerCase();
-    const resultats = listeArticles.filter(art => 
-        art.nom.toLowerCase().includes(recherche) || 
-        art.categorie.toLowerCase().includes(recherche)
-    );
-    afficherArticles(resultats);
+function filterCategory(cat, btn) {
+    selectedCategory = cat;
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderProducts();
 }
 
-// 3. Filtrer par catégorie
-function filtrer(categorie) {
-    document.querySelectorAll('.btn-filtre').forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
+function filterProducts() {
+    renderProducts();
+}
 
-    if (categorie === 'tous') {
-        afficherArticles(listeArticles);
-    } else {
-        const resultat = listeArticles.filter(art => art.categorie === categorie);
-        afficherArticles(resultat);
+function toggleCart() {
+    document.getElementById('cart-sidebar').classList.toggle('open');
+}
+
+function addToCart(id) {
+    const product = products.find(p => p.id === id);
+    if (product) {
+        cart.push(product);
+        updateCart();
+        toggleCart();
     }
 }
 
-// 4. Ajouter au panier
-function ajouterAuPanier(id) {
-    const vêtement = listeArticles.find(art => art.id === id);
-    panier.push(vêtement);
-    mettreAJourPanier();
-    alert(`"${vêtement.nom}" a été ajouté à votre panier !`);
-}
+function updateCart() {
+    document.getElementById('cart-count').innerText = cart.length;
+    const cartItems = document.getElementById('cart-items');
+    cartItems.innerHTML = '';
 
-// 5. Mettre à jour l'affichage du panier
-function mettreAJourPanier() {
-    document.getElementById('badge-panier').innerText = panier.length;
-    const zonePanier = document.getElementById('liste-panier');
-    zonePanier.innerHTML = '';
     let total = 0;
-
-    panier.forEach((item, index) => {
-        total += item.prix;
-        zonePanier.innerHTML += `
-            <div class="item-panier">
-                <div>
-                    <strong>${item.nom}</strong><br>
-                    <small>${item.prix.toLocaleString()} FCFA</small>
-                </div>
-                <button onclick="retirerDuPanier(${index})" style="color:red; border:none; background:none; cursor:pointer;">
-                    <i class="fa-solid fa-trash"></i>
-                </button>
+    cart.forEach((item, index) => {
+        total += item.price;
+        const div = document.createElement('div');
+        div.style.display = 'flex';
+        div.style.justifyContent = 'space-between';
+        div.style.marginBottom = '10px';
+        div.innerHTML = `
+            <div>
+                <strong>${item.title}</strong><br>
+                <small>${item.price.toLocaleString()} FCFA</small>
             </div>
+            <button onclick="removeFromCart(${index})" style="border:none; background:none; color:red; cursor:pointer; font-weight:bold;">&times;</button>
         `;
+        cartItems.appendChild(div);
     });
 
-    document.getElementById('total-prix').innerText = total.toLocaleString();
+    document.getElementById('cart-total-price').innerText = total.toLocaleString() + ' FCFA';
 }
 
-// 6. Supprimer un élément du panier
-function retirerDuPanier(index) {
-    panier.splice(index, 1);
-    mettreAJourPanier();
+function removeFromCart(index) {
+    cart.splice(index, 1);
+    updateCart();
 }
 
-// 7. Ouvrir / Fermer le panier
-function togglePanier() {
-    document.getElementById('modal-panier').classList.toggle('cache');
-}
-
-// 8. Envoyer la commande du panier via WhatsApp
-function validerPaiement() {
-    if (panier.length === 0) {
+function sendOrderToWhatsApp() {
+    if (cart.length === 0) {
         alert("Votre panier est vide !");
         return;
     }
 
-    const nom = document.getElementById('client-nom').value;
-    const tel = document.getElementById('client-tel').value;
-    const mode = document.getElementById('mode-paiement').value;
+    const name = document.getElementById('client-name').value;
+    const phone = document.getElementById('client-phone').value;
+    const zone = document.getElementById('client-zone').value;
+    const payment = document.getElementById('payment-method').value;
 
-    if (!nom || !tel) {
-        alert("Veuillez renseigner votre nom et votre numéro de téléphone.");
+    if (!name || !phone) {
+        alert("Veuillez remplir votre nom et numéro.");
         return;
     }
 
-    let recapPanier = panier.map(item => `- ${item.nom} (${item.prix.toLocaleString()} FCFA)`).join('\n');
-    let totalPrix = document.getElementById('total-prix').innerText;
-    
-    let messagePaiement = `Bonjour ELEGANCE BOUTIQUE BY ROXANE,\n\nJe souhaite valider ma commande :\n${recapPanier}\n\nTotal : ${totalPrix} FCFA\nMoyen de paiement : ${mode}\nNom : ${nom}\nTéléphone : ${tel}`;
+    let message = `Bonjour Elegance Boutique, je passe une commande :\n\n`;
+    message += `👤 *Nom :* ${name}\n`;
+    message += `📞 *Téléphone :* ${phone}\n`;
+    message += `📍 *Zone :* ${zone}\n`;
+    message += `💳 *Paiement :* ${payment}\n\n`;
+    message += `🛍️ *Articles :*\n`;
 
-    window.open(`https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(messagePaiement)}`, '_blank');
+    let total = 0;
+    cart.forEach((item, i) => {
+        message += `${i + 1}. ${item.title} - ${item.price.toLocaleString()} FCFA\n`;
+        total += item.price;
+    });
 
-    panier = [];
-    mettreAJourPanier();
-    togglePanier();
+    message += `\n💰 *Total : ${total.toLocaleString()} FCFA*`;
+
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank');
 }
-
-// Initialisation
-afficherArticles();
